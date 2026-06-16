@@ -1,0 +1,17 @@
+[Unit]
+Description=pi4_msd_proxy - Pi4 hardware-transcode IPTV proxy (msd_lite style)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=fooling
+# drm 硬解需 render 组, h264_v4l2m2m 编码需 video 组
+SupplementaryGroups=video render
+# systemd 下前台运行(不加 -d), 日志进 journald: journalctl -u pi4_msd_proxy -f
+ExecStart=/usr/local/bin/pi4_msd_proxy -c /usr/local/etc/pi4_msd_proxy.conf
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

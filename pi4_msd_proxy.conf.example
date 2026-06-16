@@ -1,0 +1,36 @@
+# pi4_msd_proxy 配置 — 透明转码代理(URL 里直接带上游地址, 像 msd_lite 那样无需登记频道)。
+# 默认路径 /usr/local/etc/pi4_msd_proxy.conf; 改完 sudo systemctl restart pi4_msd_proxy 生效。
+
+listen = 8887           # 监听端口; 播放器连 http://<pi-ip>:8887/<上游地址>
+ffmpeg = ffmpeg         # ffmpeg 路径(仅转码时用; 纯透传不碰它). RaspiOS 自带那个含 drm+h264_v4l2m2m
+idle_timeout = 15       # 没人看多少秒后停这一路会话(省上游和 CPU)
+
+# 默认档: height=0 = 纯透传(HTTP 真透传, 原始编码/分辨率, 零 ffmpeg; 4K HEVC 原样转发)。
+# 只有客户端 URL 带 ?target-resolution=720p 时, 那一路才挂硬件转码(Pi4 硬编上限 1080p)。
+height = 0              # 0=透传原始; 也可设 720/1080 让默认就转码(上线前 bench)
+video_bitrate = 2500k   # 仅 height>0 转码时作默认码率(降档时按 target-resolution 自动配)
+audio = copy            # copy=直通; 或 128k 表示重编 AAC(仅转码路径)
+fps = 25
+
+# 转码用硬件还是软件:
+#   auto = 自动(检测到 /dev/video11=Pi 硬件就用 drm+h264_v4l2m2m, 否则用 libx264 软编)
+#   on   = 强制硬件(Pi4); off = 强制软件(x86 本机测试/无硬件时)
+hw = auto
+
+# 缓冲(按 msd_lite 4K 推荐档; 接受 k/m 后缀):
+ring_buf_size = 8m      # 单客户端积压上限, 超了断开慢客户端
+precache = 4m           # 新客户端连上立即灌的最近数据(快速起播, 像 msd precache)
+snd_buf = 1m            # 客户端 socket 发送缓冲 SO_SNDBUF
+read_block = 16384      # 从上游/ffmpeg 每次读块(16 KiB, 低延迟)
+
+# ── 怎么用 ──────────────────────────────────────────────
+# 现有 m3u 里的:   http://192.168.1.2:8888/rtp/239.0.0.1:1234
+# 改成:            http://<pi-ip>:8887/192.168.1.2:8888/rtp/239.0.0.1:1234   (默认巅峰 1080p)
+#
+# 一键改整个 m3u:
+#   sed -E 's#https?://#http://<pi-ip>:8887/#g' old.m3u > new.m3u
+#
+# 运行时按需降档(不动配置, URL 末尾加查询参数; 改分辨率会自动配套码率):
+#   ...rtp/239.0.0.1:1234?target-resolution=720p     # 720p -> 自动 2500k
+#   ...rtp/239.0.0.1:1234?target-resolution=540p     # 540p -> 自动 1800k
+#   ...rtp/239.0.0.1:1234?target-resolution=720p&vb=3000k   # 也可再手动指定码率

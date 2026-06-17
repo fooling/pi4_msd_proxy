@@ -1,11 +1,28 @@
 # 编译产物
 pi4_msd_proxy
 *.o
+*.a
+*.so
+*.d
+*.out
 
 # 本地配置(从 .example 复制后改的)
 pi4_msd_proxy.conf
+*.local
+
+# 调试/崩溃
+core
+core.*
+*.log
+vgcore.*
+perf.data*
 
 # 编辑器/系统杂物
 *.swp
+*.swo
 *~
 .DS_Store
+.vscode/
+.idea/
+*.orig
+*.bak
